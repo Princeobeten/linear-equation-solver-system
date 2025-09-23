@@ -2,6 +2,7 @@ export interface Solution {
   status: 'solved' | 'inconsistent' | 'dependent' | 'error';
   variables: Record<string, number> | null;
   message?: string;
+  steps?: string[];
 }
 
 export interface User {

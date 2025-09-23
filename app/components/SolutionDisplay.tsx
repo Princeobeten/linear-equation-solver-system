@@ -1,10 +1,13 @@
 'use client';
 
+import { useState } from 'react';
+
 interface SolutionDisplayProps {
   solution: {
     status: 'solved' | 'inconsistent' | 'dependent' | 'error';
     variables: Record<string, number> | null;
     message?: string;
+    steps?: string[];
   } | null;
   equations: string[];
   method: string;
@@ -20,6 +23,8 @@ export default function SolutionDisplay({
   if (!solution) {
     return null;
   }
+  
+  const [showSteps, setShowSteps] = useState<boolean>(false);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-3xl mt-6">
@@ -51,6 +56,31 @@ export default function SolutionDisplay({
                 </div>
               ))}
             </div>
+            
+            {solution.steps && solution.steps.length > 0 && (
+              <div className="mt-4">
+                <button 
+                  onClick={() => setShowSteps(!showSteps)}
+                  className="text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                >
+                  {showSteps ? 'Hide Calculation Steps' : 'Show Calculation Steps'}
+                  <svg className={`ml-1 h-5 w-5 transform ${showSteps ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showSteps && (
+                  <div className="mt-3 bg-white border border-gray-200 rounded-md p-3 overflow-x-auto">
+                    <h4 className="text-md font-medium mb-2">Calculation Steps:</h4>
+                    {solution.steps.map((step, index) => (
+                      <div key={index} className="mb-2">
+                        <pre className="whitespace-pre font-mono text-xs">{step}</pre>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
         

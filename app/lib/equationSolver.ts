@@ -7,6 +7,7 @@ interface Solution {
   status: 'solved' | 'inconsistent' | 'dependent' | 'error';
   variables: Record<string, number> | null;
   message?: string;
+  steps?: string[];
 }
 
 /**
@@ -89,6 +90,13 @@ export function gaussianElimination(equations: string[]): Solution {
     for (let i = 0; i < n; i++) {
       augmentedMatrix.push([...coefficients[i], constants[i]]);
     }
+
+    // Store calculation steps
+    const steps: string[] = [];
+    
+    // Initial matrix
+    steps.push(`Initial augmented matrix:`);
+    steps.push(formatAugmentedMatrix(augmentedMatrix, variables));
     
     // Forward elimination
     for (let i = 0; i < Math.min(n, m); i++) {
@@ -103,10 +111,13 @@ export function gaussianElimination(equations: string[]): Solution {
       // Swap rows if needed
       if (maxRow !== i) {
         [augmentedMatrix[i], augmentedMatrix[maxRow]] = [augmentedMatrix[maxRow], augmentedMatrix[i]];
+        steps.push(`Swap rows ${i+1} and ${maxRow+1}:`);
+        steps.push(formatAugmentedMatrix(augmentedMatrix, variables));
       }
       
       // Skip if pivot is zero
       if (Math.abs(augmentedMatrix[i][i]) < 1e-10) {
+        steps.push(`Skipping row ${i+1} due to zero pivot.`);
         continue;
       }
       
@@ -115,14 +126,20 @@ export function gaussianElimination(equations: string[]): Solution {
       for (let j = i; j <= m; j++) {
         augmentedMatrix[i][j] /= pivot;
       }
+      steps.push(`Normalize row ${i+1} (divide by ${pivot.toFixed(4)}):`);
+      steps.push(formatAugmentedMatrix(augmentedMatrix, variables));
       
       // Eliminate other rows
       for (let j = 0; j < n; j++) {
         if (j !== i) {
           const factor = augmentedMatrix[j][i];
+          if (Math.abs(factor) < 1e-10) continue;
+          
           for (let k = i; k <= m; k++) {
             augmentedMatrix[j][k] -= factor * augmentedMatrix[i][k];
           }
+          steps.push(`Eliminate variable ${variables[i]} from row ${j+1} (subtract ${factor.toFixed(4)} times row ${i+1}):`);
+          steps.push(formatAugmentedMatrix(augmentedMatrix, variables));
         }
       }
     }
@@ -141,7 +158,8 @@ export function gaussianElimination(equations: string[]): Solution {
         return {
           status: 'inconsistent',
           variables: null,
-          message: 'The system is inconsistent (no solution exists)'
+          message: 'The system is inconsistent (no solution exists)',
+          steps: steps
         };
       }
     }
@@ -151,7 +169,8 @@ export function gaussianElimination(equations: string[]): Solution {
       return {
         status: 'dependent',
         variables: null,
-        message: 'The system has infinitely many solutions'
+        message: 'The system has infinitely many solutions',
+        steps: steps
       };
     }
     
@@ -162,7 +181,8 @@ export function gaussianElimination(equations: string[]): Solution {
         return {
           status: 'dependent',
           variables: null,
-          message: 'The system has infinitely many solutions'
+          message: 'The system has infinitely many solutions',
+          steps: steps
         };
       }
       solution[variables[i]] = parseFloat(augmentedMatrix[i][m].toFixed(4));
@@ -170,7 +190,8 @@ export function gaussianElimination(equations: string[]): Solution {
     
     return {
       status: 'solved',
-      variables: solution
+      variables: solution,
+      steps: steps
     };
   } catch (error) {
     return {
@@ -191,4 +212,36 @@ export function matrixInversion(equations: string[]): Solution {
   // For the prototype, we'll just use Gaussian Elimination
   // In a real implementation, this would be replaced with proper matrix inversion
   return gaussianElimination(equations);
+}
+
+/**
+ * Formats an augmented matrix as a string for display in the steps
+ * @param matrix The augmented matrix
+ * @param variables The variable names
+ * @returns Formatted string representation of the matrix
+ */
+function formatAugmentedMatrix(matrix: number[][], variables: string[]): string {
+  const m = variables.length;
+  let result = '';
+  
+  // Add header row with variable names
+  result += '| ';
+  for (let j = 0; j < m; j++) {
+    result += `${variables[j].padStart(8)} | `;
+  }
+  result += '  RHS  |\n';
+  
+  // Add separator
+  result += '|' + '-'.repeat((m + 1) * 11 - 1) + '|\n';
+  
+  // Add matrix rows
+  for (let i = 0; i < matrix.length; i++) {
+    result += '| ';
+    for (let j = 0; j < m; j++) {
+      result += `${matrix[i][j].toFixed(4).padStart(8)} | `;
+    }
+    result += `${matrix[i][m].toFixed(4).padStart(6)} |\n`;
+  }
+  
+  return result;
 }
