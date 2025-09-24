@@ -39,17 +39,52 @@ export default function History() {
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/history?userId=${session?.user?.id}`);
+      setError(null);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
+      
+      const response = await fetch(
+        `/api/history?userId=${session?.user?.id}`,
+        { signal: controller.signal }
+      );
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch history');
+        // Get more detailed error message if available
+        let errorMessage = 'Failed to fetch history';
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // If response body isn't valid JSON, use default message
+        }
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
+      
+      // Check if we got a warning with sample data
+      if (data.warning) {
+        console.warn('Server warning:', data.warning);
+        setError('Connection issue: Showing sample data');
+      }
+      
       setEquations(data.equations);
     } catch (error) {
       console.error('Error fetching history:', error);
-      setError('Failed to load equation history');
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          setError('Request timed out. Database connection issue.');
+        } else {
+          setError(`Failed to load equation history: ${error.message}`);
+        }
+      } else {
+        setError('Failed to load equation history: Unknown error');
+      }
     } finally {
       setLoading(false);
     }
